@@ -2,8 +2,10 @@ import os
 
 # Base directories
 BASE_DIR = os.getcwd()
-DATA_DIR = os.path.join(BASE_DIR, 'data')
-CORPUS_DIR = os.path.join(BASE_DIR,"data","corpus")
+#DATA_DIR = os.path.join(BASE_DIR, 'data')
+DATA_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "data_extract"))
+#CORPUS_DIR = os.path.join(BASE_DIR,"data","corpus")
+CORPUS_DIR = os.path.join(DATA_DIR,"corpus")
 MAX_CHAR_DISPLAY = 1000
 EMBEDDINGS_DIR = os.path.join(DATA_DIR, 'embeddings_cs1')
 
