@@ -8,13 +8,13 @@ import ast
 from chromadb.utils import embedding_functions
 sys.path.append(os.getcwd())
 from retrieval_app.config import EMBEDDINGS_DIR , MAX_CHAR_DISPLAY
+from retrieval_app.config import EMBEDDING_DEVICE , RERANKING_DEVICE
 
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
-device = torch.device("cpu")
-device = torch.device("cpu")
+reranking_device = torch.device(RERANKING_DEVICE)
 tokenizer = AutoTokenizer.from_pretrained("BAAI/bge-reranker-v2-m3")
-ranking_model = AutoModelForSequenceClassification.from_pretrained("BAAI/bge-reranker-v2-m3").to(device)
+ranking_model = AutoModelForSequenceClassification.from_pretrained("BAAI/bge-reranker-v2-m3").to(reranking_device)
 
 def initialize_chromadb(collection_name, embedding_model):
     """Initialize ChromaDB with a given collection and embedding model."""
@@ -29,7 +29,7 @@ def initialize_chromadb(collection_name, embedding_model):
         #st.session_state.available_collections = [collection_name]
 
     st.session_state.embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(
-    model_name=embedding_model,trust_remote_code=True,device="cuda",normalize_embeddings=True)
+    model_name=embedding_model,trust_remote_code=True,device="cpu",normalize_embeddings=True)
 
     st.session_state.collection = st.session_state.client.get_or_create_collection(
         name=collection_name,
@@ -118,7 +118,7 @@ def load_example_questions(jsonl_path):
 def rerank_retrieved(question,docs,n_rank) : 
     pairs = [[question,docs[i]] for i in range(len(docs))]
     with torch.no_grad():
-        inputs = tokenizer(pairs,return_tensors="pt",truncation=True,padding=True).input_ids.to(device)
+        inputs = tokenizer(pairs,return_tensors="pt",truncation=True,padding=True).input_ids.to(reranking_device)
         scores = ranking_model(inputs,return_dict=True).logits.view(-1,).float()
         #print(scores)
     similarity_scores = scores.tolist()

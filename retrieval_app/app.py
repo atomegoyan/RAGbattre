@@ -250,15 +250,15 @@ def retrieval_mode():
 
                 if use_regex_filter and regex_pattern:
                     identifiants , docs = query_documents_regex_filtering(query, n_results = n_results , regex_pattern = regex_pattern)
-                    display_docs(identifiants,docs,header_message="regex retrieval")
+                    display_docs_case_sensitive(identifiants,docs,header_message="regex retrieval")
                 elif use_reranking:
                     identifiants , docs = query_documents(query,n_results)
-                    display_docs(identifiants,docs,header_message="Naive retrieval")
+                    display_docs_case_sensitive(identifiants,docs,header_message="Naive retrieval")
                     identifiants_ranked , docs_ranked = query_documents_reranking(query,n_results)
-                    display_docs(identifiants_ranked,docs_ranked,header_message="Reranked retrieval")
+                    display_docs_case_sensitive(identifiants_ranked,docs_ranked,header_message="Reranked retrieval")
                 else : 
                     identifiants , docs = query_documents(query,n_results)
-                    display_docs(identifiants,docs,header_message="Naive retrieval")
+                    display_docs_case_sensitive(identifiants,docs,header_message="Naive retrieval")
                     display_docs_sidebar(identifiants,docs)
 
                 #for i, doc in enumerate(docs):
@@ -355,6 +355,14 @@ def rag_mode():
                 else:
                     identifiants, docs = query_documents(query, n_results)
                 
+
+                # Display Retrieved Documents
+                st.subheader(f"Retrieved Documents (Top {len(docs)})")
+                for i, doc in enumerate(docs):
+                    with st.expander(f"Document {identifiants[i]} || Document {i+1}"):
+                        st.markdown(doc)
+                        st.markdown("---")
+                        
                 # Prepare context for RAG
                 context = "\n\n".join([f"Document {i+1}:\n{doc}" for i, doc in enumerate(docs)])
                 
@@ -376,12 +384,7 @@ def rag_mode():
                 st.subheader("RAG Response")
                 st.markdown(response)
                 
-                # Display Retrieved Documents
-                st.subheader(f"Retrieved Documents (Top {len(docs)})")
-                for i, doc in enumerate(docs):
-                    with st.expander(f"Document {identifiants[i]} || Document {i+1}"):
-                        st.markdown(doc)
-                        st.markdown("---")
+                
                 
                 st.subheader("RAG Source")
                 source_messages = [
@@ -404,7 +407,7 @@ def rag_mode():
 
 
 
-def display_docs(identifiants,docs,header_message=f"Naive retrieval"):
+def display_docs_old(identifiants,docs,header_message=f"Naive retrieval"):
     st.subheader(f"{header_message} - Top {len(docs)} Results:")
     expected_source = st.session_state.get("expected_source", None)
     found_in_any_doc = False
@@ -422,6 +425,32 @@ def display_docs(identifiants,docs,header_message=f"Naive retrieval"):
         with st.expander(f"{symbol} Document {identifiants[i]} || Document {i+1}"):
             st.markdown(highlighted_doc, unsafe_allow_html=True)
             st.markdown("---")
+
+def display_docs_case_sensitive(identifiants, docs, header_message="Naive retrieval"):
+    st.subheader(f"{header_message} - Top {len(docs)} Results:")
+    expected_source = st.session_state.get("expected_source", None)
+
+    for i, doc in enumerate(docs):
+        if expected_source:
+            contains_source = expected_source in doc
+            if contains_source:
+                # Highlight exact matches only (case-sensitive)
+                highlighted_doc = re.sub(
+                    re.escape(expected_source), 
+                    f"<mark>{expected_source}</mark>", 
+                    doc
+                )
+            else:
+                highlighted_doc = doc
+            symbol = "✅" if contains_source else "❌"
+            label = f"{symbol} Document {identifiants[i]} || Document {i+1}"
+        else:
+            highlighted_doc = doc
+            label = f"Document {identifiants[i]} || Document {i+1}"
+
+        with st.expander(label):
+            st.markdown(highlighted_doc, unsafe_allow_html=True)
+            st.markdown("---") 
 def display_docs_sidebar(identifiants,docs,header_message=f"Naive retrieval"):
     with st.sidebar:
         st.subheader(f"{header_message} - Top {len(docs)} Results:")

@@ -7,12 +7,22 @@ CORPUS_DIR = os.path.join(BASE_DIR,"data","corpus")
 MAX_CHAR_DISPLAY = 1000
 EMBEDDINGS_DIR = os.path.join(DATA_DIR, 'embeddings_cs1')
 
+
+# Device configuration
+EMBEDDING_DEVICE = "cpu"
+RERANKING_DEVICE = "cpu"
+
 # Default parameters
 DEFAULT_COLLECTION = "1881-01-20"
 DEFAULT_EMBEDDING_MODEL = "Alibaba-NLP/gte-multilingual-base"
-DEFAULT_GENERATION_MODEL = "gemma3:27b"
+#DEFAULT_GENERATION_MODEL = "gemma3:27b"
+DEFAULT_GENERATION_MODEL = "llama3.2:1b"
 EXAMPLE_QUESTIONS_FILE = os.path.join(DATA_DIR, "questions_strat1.jsonl")
 
+
+
+
+# Prompt configuration
 # Default query
 DEFAULT_QUERY = "Qui est le président de la séance ?"
 
