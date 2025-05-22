@@ -22,7 +22,8 @@ from retrieval_app.retrieval.core import (
 )
 from retrieval_app.ollama_utils import (
     get_available_models,
-    get_ollama_response
+    get_ollama_response,
+    get_ollama_response_backup
 )
 from retrieval_app.config import BASE_DIR, DATA_DIR, DEFAULT_QUERY, DEFAULT_COLLECTION, DEFAULT_EMBEDDING_MODEL, EMBEDDINGS_DIR, EXAMPLE_QUESTIONS_FILE, CORPUS_DIR, \
                                 SYSTEM_PROMPT_SOURCE, DEFAULT_GENERATION_MODEL , generer_prompt_utilisateur
@@ -111,7 +112,7 @@ def chat_mode():
             # Call Ollama API
             try:
                 with st.spinner("Thinking..."):
-                    response = get_ollama_response(
+                    response = get_ollama_response_backup(
                         model=model,
                         messages=st.session_state.messages,
                         system=system_prompt,
