@@ -70,7 +70,7 @@ def chat_mode():
             index=default_index
         )
         
-        temperature = st.slider("Temperature", min_value=0.0, max_value=1.0, value=0, step=0.1)
+        temperature = st.slider("Temperature", min_value=0.0, max_value=1.0, value=0.0, step=0.1)
         
         system_prompt = st.text_area(
             "System Prompt",

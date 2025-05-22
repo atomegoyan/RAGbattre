@@ -11,14 +11,14 @@ EMBEDDINGS_DIR = os.path.join(DATA_DIR, 'embeddings_cs1')
 
 
 # Device configuration
-EMBEDDING_DEVICE = "cpu"
-RERANKING_DEVICE = "cpu"
+EMBEDDING_DEVICE = "cuda"
+RERANKING_DEVICE = "cuda"
 
 # Default parameters
 DEFAULT_COLLECTION = "1881-01-20"
 DEFAULT_EMBEDDING_MODEL = "Alibaba-NLP/gte-multilingual-base"
 #DEFAULT_GENERATION_MODEL = "gemma3:27b"
-DEFAULT_GENERATION_MODEL = "llama3.2:1b"
+DEFAULT_GENERATION_MODEL = "qwen2.5:latest"
 EXAMPLE_QUESTIONS_FILE = os.path.join(DATA_DIR, "questions_strat1.jsonl")
 
 
