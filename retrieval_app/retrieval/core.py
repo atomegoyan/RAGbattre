@@ -1,6 +1,5 @@
 import os
 import json
-import streamlit as st
 import regex as re
 import chromadb
 import sys
@@ -16,31 +15,28 @@ reranking_device = torch.device(RERANKING_DEVICE)
 tokenizer = AutoTokenizer.from_pretrained("BAAI/bge-reranker-v2-m3")
 ranking_model = AutoModelForSequenceClassification.from_pretrained("BAAI/bge-reranker-v2-m3").to(reranking_device)
 
-def initialize_chromadb(collection_name, embedding_model):
+def initialize_chromadb(collection_name, embedding_model, client=None):
     """Initialize ChromaDB with a given collection and embedding model."""
     os.makedirs(EMBEDDINGS_DIR, exist_ok=True)
-    #st.session_state.client = chromadb.PersistentClient(path=EMBEDDINGS_DIR)
+    
+    if client is None:
+        client = chromadb.PersistentClient(path=EMBEDDINGS_DIR)
 
-    try:
-        collections = get_available_collections(st.session_state.client)
-        #st.session_state.available_collections = [col for col in collections]
-    except Exception as e:
-        st.error(f"Error fetching collections: {str(e)}")
-        #st.session_state.available_collections = [collection_name]
+    embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(
+        model_name=embedding_model,trust_remote_code=True,device="cpu",normalize_embeddings=True)
 
-    st.session_state.embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(
-    model_name=embedding_model,trust_remote_code=True,device="cpu",normalize_embeddings=True)
-
-    st.session_state.collection = st.session_state.client.get_or_create_collection(
+    collection = client.get_or_create_collection(
         name=collection_name,
-        embedding_function=st.session_state.embedding_function
+        embedding_function=embedding_function
     )
+    
+    return client, collection, embedding_function
    
 
-def query_documents(query, n_results=10):
+def query_documents(query, collection, n_results=10):
     """Query documents from ChromaDB."""
     try:
-        results = st.session_state.collection.query(
+        results = collection.query(
             query_texts=query,
             n_results=n_results
         )
@@ -48,24 +44,23 @@ def query_documents(query, n_results=10):
     except Exception as e:
         raise Exception(f"Error querying documents: {str(e)}")
     
-def query_documents_reranking(query, n_results=10):
+def query_documents_reranking(query, collection, n_results=10):
     """Query documents from ChromaDB."""
     try:
-        results = st.session_state.collection.query(
+        results = collection.query(
             query_texts=query,
             n_results=n_results
         )
 
         ids_reranked , docs_reranked = rerank_retrieved(query,results["documents"][0],n_rank=n_results)
         return [results["ids"][0][i] for i in ids_reranked] , docs_reranked
-#        return results["ids"][0], results["documents"][0]
     except Exception as e:
         raise Exception(f"Error querying documents: {str(e)}")
     
-def query_documents_filtered(query, word_to_filter = "",n_results=10):
+def query_documents_filtered(query, collection, word_to_filter = "",n_results=10):
     """Query documents from ChromaDB."""
     try:
-        results = st.session_state.collection.query(
+        results = collection.query(
             query_texts=query,
             n_results=n_results,where_document={"$contains":word_to_filter}
         )
@@ -73,12 +68,12 @@ def query_documents_filtered(query, word_to_filter = "",n_results=10):
     except Exception as e:
         raise Exception(f"Error querying documents: {str(e)}")
     
-def query_documents_regex_filtering(query, regex_pattern = "",n_results=10):
+def query_documents_regex_filtering(query, collection, regex_pattern = "",n_results=10):
     """Query documents from ChromaDB."""
     filtered_documents = []
     filtered_ids = []
     try:
-        results = st.session_state.collection.query(
+        results = collection.query(
             query_texts=query,
             n_results=n_results
         )
@@ -105,14 +100,13 @@ def get_available_collections(client):
     except Exception as e:
         raise Exception(f"Error getting collections: {str(e)}")
 
-@st.cache_data(show_spinner=False)
 def load_example_questions(jsonl_path):
     """Load example questions from a JSONL file."""
     try:
         with open(jsonl_path, "r", encoding="utf-8") as f:
             return [json.loads(line) for line in f]
     except Exception as e:
-        st.error(f"Error loading example questions: {e}")
+        print(f"Error loading example questions: {e}")
         return []
 
 def rerank_retrieved(question,docs,n_rank) : 

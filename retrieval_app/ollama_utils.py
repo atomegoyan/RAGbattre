@@ -1,4 +1,5 @@
 import ollama
+CTX_SIZE = 10000
 
 def get_available_models():
     try:
