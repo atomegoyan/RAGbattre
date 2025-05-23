@@ -142,7 +142,9 @@ def retrieval_mode():
         
         _display_example_questions(collection_name)
         _setup_chromadb_controls(collection_name)
-        _display_session_info(collection_name)
+    
+    # Display session info in main area
+    _display_session_info_main(collection_name)
     
     # Query input and search
     query = _handle_query_input()
@@ -164,6 +166,9 @@ def rag_mode():
         _display_example_questions(collection_name)
         _setup_chromadb_controls(collection_name)
 
+    # Display session info in main area
+    _display_session_info_main(collection_name)
+    
     # Query input and RAG generation
     query = _handle_rag_query_input()
     _handle_rag_generation(query, collection_name, model, temperature, n_results, system_prompt, use_reranking)
@@ -195,8 +200,13 @@ def _setup_retrieval_options():
     """Setup retrieval configuration options."""
     n_results = st.slider("Number of results", min_value=1, max_value=20, value=3)
     use_regex_filter = st.checkbox("Enable regex filtering")
+    
+    # Show regex pattern input only when filtering is enabled
+    regex_pattern = ""
+    if use_regex_filter:
+        regex_pattern = st.text_input("Enter regex pattern", "")
+    
     use_reranking = st.checkbox("Enable document reranking")
-    regex_pattern = st.text_input("Enter regex pattern (if any)", "")
     return n_results, use_regex_filter, use_reranking, regex_pattern
 
 def _setup_chromadb_controls(collection_name):
@@ -218,12 +228,22 @@ def _setup_chromadb_controls(collection_name):
             st.error(f"Error initializing ChromaDB: {str(e)}")
             st.session_state.chroma_initialized = False
 
-def _display_session_info(collection_name):
-    """Display session information."""
-    st.markdown("### Débat analysé")
-    text = query_seance(collection_name, CORPUS_DIR)
-    with st.expander(f"Séance du {collection_name}"):
-        st.markdown(f"{text}")
+def _display_session_info_main(collection_name):
+    """Display session information in main area."""
+    with st.expander(f"📖 Débat analysé - Séance du {collection_name}", expanded=False):
+        try:
+            text = query_seance(collection_name, CORPUS_DIR)
+            # Create a scrollable container with fixed height
+            st.markdown(
+                f"""
+                <div style="height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 5px;">
+                    {text.replace(chr(10), '<br>')}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+        except Exception as e:
+            st.error(f"Error loading session info: {str(e)}")
 
 def _display_example_questions(collection_name):
     """Display example questions for the selected collection."""
