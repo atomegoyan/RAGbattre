@@ -3,11 +3,11 @@ import ast
 
 # Base directories
 BASE_DIR = os.getcwd()
-#DATA_DIR = os.path.join(BASE_DIR, 'data')
-DATA_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "data_extract"))
+DATA_DIR = os.path.join(BASE_DIR, 'data')
+#DATA_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "data_extract"))
 #CORPUS_DIR = os.path.join(BASE_DIR,"data","corpus")
 CORPUS_DIR = os.path.join(DATA_DIR,"corpus")
-MAX_CHAR_DISPLAY = 10000
+MAX_CHAR_DISPLAY = 1000
 EMBEDDINGS_DIR = os.path.join(DATA_DIR, 'embeddings_cs1')
 
 
@@ -22,6 +22,8 @@ DEFAULT_COLLECTION = "1881-01-20"
 DEFAULT_EMBEDDING_MODEL = "Alibaba-NLP/gte-multilingual-base"
 #DEFAULT_GENERATION_MODEL = "gemma3:27b"
 DEFAULT_GENERATION_MODEL = "llama3.2:1b"
+MISTRAL_MODEL = "mistral-large-latest"
+mistral_api_key = "spJ5ykWOWSiVCjbdf1PvfSX5XPVLse0x"
 EXAMPLE_QUESTIONS_FILE = os.path.join(DATA_DIR, "questions_strat1.jsonl")
 
 

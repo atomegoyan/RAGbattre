@@ -23,7 +23,8 @@ from retrieval_app.retrieval.core import (
 from retrieval_app.ollama_utils import (
     get_available_models,
     get_ollama_response,
-    get_ollama_response_backup
+    get_ollama_response_backup,
+    get_ollama_response_mistral
 )
 from retrieval_app.config import BASE_DIR, DATA_DIR, DEFAULT_QUERY, DEFAULT_COLLECTION, DEFAULT_EMBEDDING_MODEL, EMBEDDINGS_DIR, EXAMPLE_QUESTIONS_FILE, CORPUS_DIR, \
                                 SYSTEM_PROMPT_SOURCE, DEFAULT_GENERATION_MODEL , generer_prompt_utilisateur_local
@@ -112,7 +113,7 @@ def chat_mode():
             # Call Ollama API
             try:
                 with st.spinner("Thinking..."):
-                    response = get_ollama_response_backup(
+                    response = get_ollama_response_mistral(
                         model=model,
                         messages=st.session_state.messages,
                         system=system_prompt,
@@ -229,6 +230,16 @@ def _setup_chromadb_controls(collection_name):
             st.session_state.chroma_initialized = False
 
 def _display_session_info_main(collection_name):
+    """Display session information in main area."""
+    with st.expander(f"📖 Débat analysé - Séance du {collection_name}", expanded=False):
+        try:
+            text = query_seance(collection_name, CORPUS_DIR)
+            # Create a scrollable container with fixed height
+            st.markdown(text)
+        except Exception as e:
+            st.error(f"Error loading session info: {str(e)}")
+
+def _display_session_info_main_backup(collection_name):
     """Display session information in main area."""
     with st.expander(f"📖 Débat analysé - Séance du {collection_name}", expanded=False):
         try:
@@ -384,8 +395,7 @@ def _generate_rag_response(query, context, model, system_prompt, temperature):
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": f"Context:\n{context}\n\nQuery: {query}\n\n"}
     ]
-    
-    return get_ollama_response_backup(
+    return get_ollama_response_mistral(
         model=model,
         messages=rag_messages,
         system=system_prompt,
@@ -400,7 +410,7 @@ def _generate_and_display_source(identifiants, docs, query, model, temperature):
         {"role": "user", "content": generer_prompt_utilisateur_local(identifiants, docs, query)}
     ]
     
-    source = get_ollama_response_backup(
+    source = get_ollama_response_mistral(
         model=model,
         messages=source_messages,
         system=SYSTEM_PROMPT_SOURCE,
