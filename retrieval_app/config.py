@@ -26,6 +26,9 @@ MISTRAL_MODEL = "mistral-large-latest"
 mistral_api_key = "spJ5ykWOWSiVCjbdf1PvfSX5XPVLse0x"
 EXAMPLE_QUESTIONS_FILE = os.path.join(DATA_DIR, "questions_strat1.jsonl")
 
+# Model backend configuration - "ollama" or "mistral"
+MODEL_BACKEND = "mistral"
+
 
 
 

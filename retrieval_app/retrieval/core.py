@@ -37,7 +37,7 @@ def query_documents(query, collection, n_results=10):
     """Query documents from ChromaDB."""
     try:
         results = collection.query(
-            query_texts=query,
+            query_texts=[query],
             n_results=n_results
         )
         return results["ids"][0], results["documents"][0]
@@ -48,7 +48,7 @@ def query_documents_reranking(query, collection, n_results=10):
     """Query documents from ChromaDB."""
     try:
         results = collection.query(
-            query_texts=query,
+            query_texts=[query],
             n_results=n_results
         )
 
@@ -61,7 +61,7 @@ def query_documents_filtered(query, collection, word_to_filter = "",n_results=10
     """Query documents from ChromaDB."""
     try:
         results = collection.query(
-            query_texts=query,
+            query_texts=[query],
             n_results=n_results,where_document={"$contains":word_to_filter}
         )
         return results["ids"][0], results["documents"][0]
@@ -74,7 +74,7 @@ def query_documents_regex_filtering(query, collection, regex_pattern = "",n_resu
     filtered_ids = []
     try:
         results = collection.query(
-            query_texts=query,
+            query_texts=[query],
             n_results=n_results
         )
 
