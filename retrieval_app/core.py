@@ -5,12 +5,47 @@ import chromadb
 import sys
 import ast
 from chromadb.utils import embedding_functions
-sys.path.append(os.getcwd())
-from retrieval_app.config import EMBEDDINGS_DIR , MAX_CHAR_DISPLAY
-from retrieval_app.config import EMBEDDING_DEVICE , RERANKING_DEVICE
-
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+# Base directories
+BASE_DIR = os.getcwd()
+DATA_DIR = os.path.join(BASE_DIR, 'data')
+CORPUS_DIR = os.path.join(DATA_DIR,"corpus")
+MAX_CHAR_DISPLAY = 1000
+EMBEDDINGS_DIR = os.path.join(DATA_DIR, 'embeddings_cs1')
+
+# Device configuration
+EMBEDDING_DEVICE = "cpu"
+RERANKING_DEVICE = "cpu"
+
+# Default parameters
+DEFAULT_COLLECTION = "1881-01-20"
+DEFAULT_EMBEDDING_MODEL = "Alibaba-NLP/gte-multilingual-base"
+DEFAULT_GENERATION_MODEL = "llama3.2:1b"
+MISTRAL_MODEL = "mistral-large-latest"
+mistral_api_key = "spJ5ykWOWSiVCjbdf1PvfSX5XPVLse0x"
+EXAMPLE_QUESTIONS_FILE = os.path.join(DATA_DIR, "questions_strat1.jsonl")
+TEMPERATURE = 0.0
+
+# Model backend configuration - "ollama" or "mistral"
+MODEL_BACKEND = "mistral"
+
+# Default query
+DEFAULT_QUERY = "Qui est le président de la séance ?"
+
+SYSTEM_PROMPT_SOURCE = """Tu es un expert en extraction précise d'informations à partir de documents. Ta tâche principale est de localiser avec une précision absolue la source exacte d'une réponse dans un ensemble de documents.
+
+Règles cruciales :
+1. Tu dois TOUJOURS renvoyer un dictionnaire Python
+2. Le dictionnaire DOIT contenir exactement deux clés :
+   - `document_id`: L'identifiant unique du document source
+   - `texte_source`: Le texte source EXACT sans aucune modification, correction ou reformulation
+3. Si aucune réponse n'est trouvée, les valeurs seront `None`
+4. Le texte source doit être copié mot pour mot depuis le document original
+5. la source renvoyée doit contenir tout le contexte nécessaire pour répondre à la question"""
+
+# Initialize reranking model
 reranking_device = torch.device(RERANKING_DEVICE)
 tokenizer = AutoTokenizer.from_pretrained("BAAI/bge-reranker-v2-m3")
 ranking_model = AutoModelForSequenceClassification.from_pretrained("BAAI/bge-reranker-v2-m3").to(reranking_device)
@@ -114,11 +149,35 @@ def rerank_retrieved(question,docs,n_rank) :
     with torch.no_grad():
         inputs = tokenizer(pairs,return_tensors="pt",truncation=True,padding=True).input_ids.to(reranking_device)
         scores = ranking_model(inputs,return_dict=True).logits.view(-1,).float()
-        #print(scores)
     similarity_scores = scores.tolist()
     top_k_indices = sorted(range(len(similarity_scores)),key=lambda i : similarity_scores[i],reverse=True)[:n_rank]
     top_k_documents = [docs[i] for i in top_k_indices]
     return top_k_indices , top_k_documents
+
+def generer_prompt_utilisateur_local(identifiants,documents, query):
+
+    documents_numerotes = [f"Document {i}:\n{doc}" for i, doc in zip(identifiants,documents)]
+    
+    prompt_utilisateur = f"""Voici les documents à analyser :
+{chr(10).join(documents_numerotes)}
+
+Question à résoudre : {query}
+
+Réponds UNIQUEMENT sous forme de dictionnaire Python en respectant strictement les règles suivantes :
+- Identifie le document source de la réponse
+- Copie le texte source mot pour mot
+- Ne modifie JAMAIS le texte original
+- La source renvoyée doit contenir suffisament de contexte pour pouvoir répondre à la question
+- Retourne un dictionnaire avec `document_id` et `texte_source`
+
+Exemple de format de réponse attendu :
+{{
+    "id du document": 2,
+    "texte_source": "Texte exact copié du document source"
+}}
+"""
+    
+    return prompt_utilisateur
 
 def extract_document_data(input_string):
     """

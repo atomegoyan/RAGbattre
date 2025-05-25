@@ -1,7 +1,7 @@
 import ollama
 from mistralai import Mistral
 
-from config import MISTRAL_MODEL, mistral_api_key, MODEL_BACKEND
+from .core import MISTRAL_MODEL, mistral_api_key, MODEL_BACKEND
 
 CTX_SIZE = 10000
 

@@ -9,7 +9,7 @@ import regex as re
 import chromadb
 from chromadb.utils import embedding_functions
 sys.path.append(os.getcwd())
-from retrieval_app.retrieval.core import (
+from retrieval_app.core import (
     initialize_chromadb,
     query_documents,
     get_available_collections,
@@ -20,15 +20,15 @@ from retrieval_app.retrieval.core import (
     query_documents_reranking,
     extract_document_data
 )
-from retrieval_app.ollama_utils import (
+from retrieval_app.llm_utils import (
     get_available_models,
     get_ollama_response,
     get_ollama_response_backup,
     get_ollama_response_mistral,
     get_llm_response
 )
-from retrieval_app.config import BASE_DIR, DATA_DIR, DEFAULT_QUERY, DEFAULT_COLLECTION, DEFAULT_EMBEDDING_MODEL, EMBEDDINGS_DIR, EXAMPLE_QUESTIONS_FILE, CORPUS_DIR, \
-                                SYSTEM_PROMPT_SOURCE, DEFAULT_GENERATION_MODEL, generer_prompt_utilisateur_local, MODEL_BACKEND
+from retrieval_app.core import BASE_DIR, DATA_DIR, DEFAULT_QUERY, DEFAULT_COLLECTION, DEFAULT_EMBEDDING_MODEL, EMBEDDINGS_DIR, EXAMPLE_QUESTIONS_FILE, CORPUS_DIR, \
+                                SYSTEM_PROMPT_SOURCE, DEFAULT_GENERATION_MODEL, generer_prompt_utilisateur_local, MODEL_BACKEND, TEMPERATURE
 
 
 def main():
@@ -38,7 +38,42 @@ def main():
         layout="wide"
     )
     
-    st.title("Parliamentary Debate Analysis Tool")
+    # Custom CSS for better styling
+    st.markdown("""
+    <style>
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 0rem;
+    }
+    .main > div {
+        padding-top: 1.5rem;
+    }
+    h2 {
+        margin-top: 0.5rem !important;
+        padding-top: 0.5rem !important;
+    }
+    .metric-container {
+        background-color: #f0f2f6;
+        padding: 1rem;
+        border-radius: 5px;
+        border-left: 4px solid #2a5298;
+    }
+    .stButton > button[kind="primary"] {
+        background: linear-gradient(90deg, #2a5298 0%, #1e3c72 100%);
+        border: none;
+        border-radius: 25px;
+        font-weight: 600;
+    }
+    .sidebar-section {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("## RAGbattre")
     
     # Define application modes
     modes = ["Document Retrieval","RAG Mode", "Chat with Ollama"]
@@ -52,7 +87,7 @@ def main():
         retrieval_mode()
 
 def chat_mode():
-    st.subheader("Chat with Ollama LLM")
+    st.markdown("### Chat with Ollama LLM")
     
     # Initialize chat session state
     _initialize_chat_session_state()
@@ -61,39 +96,53 @@ def chat_mode():
     with st.sidebar:
         st.header("Chat Configuration")
         
-        model, temperature, system_prompt = _setup_chat_options()
+        model, system_prompt = _setup_chat_options()
         _setup_ollama_connection_test()
     
     # Display chat history and handle input
     _display_chat_history()
-    _handle_chat_input(model, temperature, system_prompt)
+    _handle_chat_input(model, system_prompt)
 
 def retrieval_mode():
-    st.subheader("Document Retrieval Mode")
+    #st.markdown("### Document Retrieval Mode")
     
     # Initialize session state
     _initialize_session_state()
     
-    # Sidebar configuration
+    # Sidebar configuration with organized sections
     with st.sidebar:
-        st.header("Retrieval Configuration")
+        st.header("⚙️ Configuration")
         
-        collection_name = _setup_collection_selector()
-        n_results, use_regex_filter, use_reranking, regex_pattern = _setup_retrieval_options()
+        # Basic Configuration Section
+        with st.expander("📋 Basic Settings", expanded=True):
+            collection_name = _setup_collection_selector()
+            n_results = st.slider("Number of results", min_value=1, max_value=20, value=3)
         
+        # Advanced Options Section
+        with st.expander("🔧 Advanced Options", expanded=False):
+            use_regex_filter, regex_pattern = _setup_regex_options()
+            use_reranking = st.checkbox("🎯 Enable document reranking")
+        
+        # Auto-initialize ChromaDB
+        _auto_initialize_chromadb(collection_name)
+        
+        # Example Questions Section
         _display_example_questions(collection_name)
-        _setup_chromadb_controls(collection_name)
     
-    # Display session info in main area
+    # Main area with better organization
+    # 1. Query Input (prominent position)
+    #st.markdown("#### Search Query")
+    query = _handle_query_input(prompt_text="", default_text="Qui est le président de la séance ?")
+    
+    # 2. Search Results
+    _handle_document_search_enhanced(query, collection_name, n_results, use_regex_filter, use_reranking, regex_pattern)
+    
+    # 3. Session Info (moved to bottom)
+    st.markdown("---")
     _display_session_info_main(collection_name)
-    
-    # Query input and search
-    query = _handle_query_input()
-    st.markdown("XXX")
-    _handle_document_search(query, collection_name, n_results, use_regex_filter, use_reranking, regex_pattern)
 
 def rag_mode():
-    st.subheader("RAG Mode: Retrieval Augmented Generation")
+    st.markdown("### RAG Mode: Retrieval Augmented Generation")
     
     # Initialize session state
     _initialize_session_state()
@@ -103,17 +152,19 @@ def rag_mode():
         st.header("RAG Configuration")
         
         collection_name = _setup_collection_selector()
-        model, temperature, n_results, system_prompt, use_reranking = _setup_rag_options()
+        model, n_results, system_prompt, use_reranking = _setup_rag_options()
+        
+        # Auto-initialize ChromaDB
+        _auto_initialize_chromadb(collection_name)
         
         _display_example_questions(collection_name)
-        _setup_chromadb_controls(collection_name)
 
     # Display session info in main area
     _display_session_info_main(collection_name)
     
     # Query input and RAG generation
     query = _handle_rag_query_input()
-    _handle_rag_generation(query, collection_name, model, temperature, n_results, system_prompt, use_reranking)
+    _handle_rag_generation(query, collection_name, model, n_results, system_prompt, use_reranking)
 
 
 # Helper functions for cleaner code organization
@@ -138,44 +189,76 @@ def _setup_collection_selector():
         index=0
     )
 
-def _setup_retrieval_options():
-    """Setup retrieval configuration options."""
-    n_results = st.slider("Number of results", min_value=1, max_value=20, value=3)
-    use_regex_filter = st.checkbox("Enable regex filtering")
+def _setup_regex_options():
+    """Setup regex filtering options with smart suggestions."""
+    use_regex_filter = st.checkbox("🔎 Enable regex filtering")
     
-    # Show regex pattern input only when filtering is enabled
     regex_pattern = ""
     if use_regex_filter:
-        regex_pattern = st.text_input("Enter regex pattern", "")
+        # Smart regex suggestions
+        regex_suggestions = {
+            "Speaker mentions": r"M\. [A-Z][a-z]+",
+            "Questions": r"\?",
+            "Votes": r"vote|voter|votation",
+            "Custom": ""
+        }
+        
+        suggestion = st.selectbox("Choose pattern or custom:", list(regex_suggestions.keys()))
+        
+        if suggestion == "Custom":
+            regex_pattern = st.text_input("📝 Enter custom regex pattern:", "")
+        else:
+            regex_pattern = regex_suggestions[suggestion]
+            st.code(f"Pattern: {regex_pattern}")
     
-    use_reranking = st.checkbox("Enable document reranking")
-    return n_results, use_regex_filter, use_reranking, regex_pattern
+    return use_regex_filter, regex_pattern
 
-def _setup_chromadb_controls(collection_name):
-    """Setup ChromaDB initialization controls."""
-    if st.button("Initialize ChromaDB"):
-        _initialize_chromadb_if_needed(collection_name, show_success=True)
+def _auto_initialize_chromadb(collection_name):
+    """Auto-initialize ChromaDB with status indicator."""
+    if not hasattr(st.session_state, 'chroma_initialized') or not st.session_state.chroma_initialized:
+        with st.spinner("⚙️ Initializing ChromaDB..."):
+            success = _initialize_chromadb_if_needed(collection_name, show_success=False)
+            if success:
+                st.success("✓ ChromaDB ready")
+            else:
+                st.error("❌ ChromaDB initialization failed")
+                if st.button("🔄 Retry Initialization"):
+                    st.rerun()
+    else:
+        st.success("✓ ChromaDB connected")
 
 def _display_session_info_main(collection_name):
-    """Display session information in main area."""
+    """Display session information in main area with better styling."""
+    st.markdown("#### Session Information")
     with st.expander(f"📖 Débat analysé - Séance du {collection_name}", expanded=False):
         try:
             text = query_seance(collection_name, CORPUS_DIR)
-            # Create a scrollable container with fixed height
-            st.markdown(text)
+            
+            # Info header
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.info(f"📅 Session: {collection_name}")
+            with col2:
+                st.metric("Length", f"{len(text):,} chars")
+            
+            # Scrollable content
+            container = st.container(height=400)
+            with container:
+                st.markdown(text)
+                
         except Exception as e:
-            st.error(f"Error loading session info: {str(e)}")
+            st.error(f"❌ Error loading session info: {str(e)}")
 
 
 def _display_example_questions(collection_name):
-    """Display example questions for the selected collection."""
+    """Display example questions for the selected collection with enhanced styling."""
     example_questions = load_example_questions(EXAMPLE_QUESTIONS_FILE)
     filtered_questions = [q for q in example_questions if q["file_name"] == collection_name]
     
     if filtered_questions:
-        with st.expander("💡 Show Example Questions"):
+        with st.expander(f"💡 Example Questions ({len(filtered_questions)} available)", expanded=False):
             # Create a scrollable container using st.container with height
-            container = st.container(height=400)
+            container = st.container(height=350)
             
             with container:
                 for i, q in enumerate(filtered_questions):
@@ -183,31 +266,37 @@ def _display_example_questions(collection_name):
                     col1, col2 = st.columns([4, 1])
                     
                     with col1:
-                        # Show truncated question
-                        question_preview = q['question'][:80] + "..." if len(q['question']) > 80 else q['question']
+                        # Show truncated question with better formatting
+                        question_preview = q['question'][:70] + "..." if len(q['question']) > 70 else q['question']
                         st.markdown(f"**Q{i+1}:** {question_preview}")
                     
                     with col2:
                         # Toggle button to show/hide details
                         toggle_key = f"toggle_q_{i}"
-                        if st.button("📖", key=toggle_key, help="Show details"):
+                        if st.button("👁️", key=toggle_key, help="Show details", use_container_width=True):
                             st.session_state[f"show_details_{i}"] = not st.session_state.get(f"show_details_{i}", False)
                     
                     # Show details if toggled
                     if st.session_state.get(f"show_details_{i}", False):
-                        st.markdown(f"**Answer Excerpt:** {q['source']}")
-                        if st.button(f"Use this question", key=f"use_q_{i}"):
+                        st.markdown(f"**📝 Answer Excerpt:** {q['source'][:200]}...")
+                        if st.button(f"✅ Use this question", key=f"use_q_{i}", type="secondary"):
                             st.session_state.query = q["question"]
                             st.session_state.expected_source = q["source"]
+                            st.success("✓ Question loaded!")
                     
-                    st.markdown("---")
+                    st.divider()
     else:
-        st.info("No example questions available for this collection.")
+        st.info("ℹ️ No example questions available for this collection.")
 
 def _handle_query_input(prompt_text="Enter your query", default_text="Qui est le président de la séance ?"):
     """Handle query input and state management."""
     default_query = st.session_state.get("query", default_text)
-    query = st.text_input(prompt_text, value=default_query)
+    
+    # If prompt_text is empty, use placeholder instead of label
+    if prompt_text.strip() == "":
+        query = st.text_input("query", value=default_query, placeholder=default_text, label_visibility="collapsed")
+    else:
+        query = st.text_input(prompt_text, value=default_query)
     
     if query != st.session_state.get("query", ""):
         st.session_state.query = query
@@ -239,37 +328,81 @@ def _initialize_chromadb_if_needed(collection_name, show_success=False):
             return False
     return True
 
-def _handle_document_search(query, collection_name, n_results, use_regex_filter, use_reranking, regex_pattern):
-    """Handle document search with different options."""
-    if st.button("Search Documents"):
+def _handle_document_search_enhanced(query, collection_name, n_results, use_regex_filter, use_reranking, regex_pattern):
+    """Enhanced document search with better UI and no duplications."""
+    
+    # Search button with better styling
+    search_col, status_col = st.columns([2, 3])
+    
+    with search_col:
+        search_clicked = st.button("🔍 Search Documents", type="primary", use_container_width=True)
+    
+    if search_clicked and query.strip():
         if not _initialize_chromadb_if_needed(collection_name):
             return
         
         try:
-            with st.spinner("Searching for relevant documents..."):
+            with st.spinner("🔍 Searching for relevant documents..."):
+                # Determine search strategy
                 if use_regex_filter and regex_pattern:
+                    strategy = "🔎 Regex Filtered Search"
                     identifiants, docs = query_documents_regex_filtering(
                         query, st.session_state.collection, regex_pattern, n_results
                     )
-                    display_documents(identifiants, docs, "regex retrieval")
+                    _display_search_results(identifiants, docs, strategy, use_reranking)
+                    
                 elif use_reranking:
-                    identifiants, docs = query_documents(query, st.session_state.collection, n_results)
-                    display_documents(identifiants, docs, "Naive retrieval")
+                    # Show both naive and reranked results in tabs
+                    strategy = "🎯 Reranked Search"
+                    
+                    # Get initial results
+                    identifiants_naive, docs_naive = query_documents(query, st.session_state.collection, n_results)
+                    
+                    # Get reranked results
                     identifiants_ranked, docs_ranked = query_documents_reranking(
                         query, st.session_state.collection, n_results
                     )
-                    display_documents(identifiants_ranked, docs_ranked, "Reranked retrieval")
+                    
+                    # Display in tabs
+                    tab1, tab2 = st.tabs(["📄 Standard Results", "🎯 Reranked Results"])
+                    
+                    with tab1:
+                        display_documents(identifiants_naive, docs_naive, "Standard Search Results")
+                    
+                    with tab2:
+                        display_documents(identifiants_ranked, docs_ranked, "Reranked Search Results")
+                        
                 else:
+                    strategy = "📄 Standard Search"
                     identifiants, docs = query_documents(query, st.session_state.collection, n_results)
-                    display_documents(identifiants, docs, "Naive retrieval")
-                    display_documents(identifiants, docs, "Naive retrieval", location="sidebar", truncate=True)
+                    _display_search_results(identifiants, docs, strategy, False)
+                    
+                # Show search summary
+                #with status_col:
+                #    st.success(f"✓ Found {len(docs) if 'docs' in locals() else 0} documents")
+                    
         except Exception as e:
-            st.error(f"Error querying documents: {str(e)}")
+            st.error(f"❌ Error querying documents: {str(e)}")
+    
+    elif search_clicked and not query.strip():
+        st.warning("⚠️ Please enter a search query")
+
+def _display_search_results(identifiants, docs, strategy, show_sidebar_preview=False):
+    """Display search results with optional sidebar preview."""
+    display_documents(identifiants, docs, strategy)
+    
+    # Optional sidebar preview for standard search
+    if show_sidebar_preview and len(docs) > 0:
+        with st.sidebar:
+            st.markdown("### 👁️ Quick Preview")
+            with st.container(height=300):
+                for i, doc in enumerate(docs[:3]):  # Show top 3 in sidebar
+                    st.markdown(f"**Doc {i+1}:** {doc[:100]}...")
+                    st.markdown("---")
 
 def _setup_rag_options():
     """Setup RAG-specific configuration options."""
     model = DEFAULT_GENERATION_MODEL
-    temperature = st.slider("Temperature", min_value=0.0, max_value=1.0, value=0.0, step=0.1)
     n_results = st.slider("Number of context documents", min_value=1, max_value=20, value=3)
     
     system_prompt = st.text_area(
@@ -281,13 +414,13 @@ def _setup_rag_options():
     
     use_reranking = st.checkbox("Enable document reranking")
     
-    return model, temperature, n_results, system_prompt, use_reranking
+    return model, n_results, system_prompt, use_reranking
 
 def _handle_rag_query_input():
     """Handle RAG query input."""
     return _handle_query_input("Enter your query about the documents")
 
-def _handle_rag_generation(query, collection_name, model, temperature, n_results, system_prompt, use_reranking):
+def _handle_rag_generation(query, collection_name, model, n_results, system_prompt, use_reranking):
     """Handle RAG generation process."""
     if st.button("Generate RAG Response"):
         if not _initialize_chromadb_if_needed(collection_name):
@@ -306,13 +439,13 @@ def _handle_rag_generation(query, collection_name, model, temperature, n_results
                 
                 # Generate and display RAG response
                 context = "\n\n".join([f"Document {i+1}:\n{doc}" for i, doc in enumerate(docs)])
-                response = _generate_rag_response(query, context, model, system_prompt, temperature)
+                response = _generate_rag_response(query, context, model, system_prompt)
                 
                 st.subheader("RAG Response")
                 st.markdown(response)
                 
                 # Generate and display source information
-                _generate_and_display_source(identifiants, docs, query, model, temperature)
+                _generate_and_display_source(identifiants, docs, query, model)
         
         except Exception as e:
             st.error(f"Error in RAG generation: {str(e)}")
@@ -321,7 +454,7 @@ def _display_retrieved_documents(identifiants, docs):
     """Display the retrieved documents."""
     display_documents(identifiants, docs, "Retrieved Documents")
 
-def _generate_rag_response(query, context, model, system_prompt, temperature):
+def _generate_rag_response(query, context, model, system_prompt):
     """Generate RAG response using the LLM."""
     rag_messages = [
         {"role": "system", "content": system_prompt},
@@ -331,22 +464,21 @@ def _generate_rag_response(query, context, model, system_prompt, temperature):
         model=model,
         messages=rag_messages,
         system=system_prompt,
-        temperature=temperature
+        temperature=TEMPERATURE
     )
 
-def _generate_and_display_source(identifiants, docs, query, model, temperature):
+def _generate_and_display_source(identifiants, docs, query, model):
     """Generate and display source information."""
     st.subheader("RAG Source")
     source_messages = [
         {"role": "system", "content": SYSTEM_PROMPT_SOURCE},
         {"role": "user", "content": generer_prompt_utilisateur_local(identifiants, docs, query)}
     ]
-    
     source = get_llm_response(
         model=model,
         messages=source_messages,
         system=SYSTEM_PROMPT_SOURCE,
-        temperature=temperature
+        temperature=TEMPERATURE
     )
     
     parsed_source = extract_document_data(source)
@@ -387,15 +519,13 @@ def _setup_chat_options():
         model = "mistral-large-latest"
         st.info(f"Using Mistral backend with model: {model}")
     
-    temperature = st.slider("Temperature", min_value=0.0, max_value=1.0, value=0.0, step=0.1)
-    
     system_prompt = st.text_area(
         "System Prompt",
         value="You are a helpful assistant that analyzes parliamentary debates. Provide clear, concise analysis.",
         height=100
     )
     
-    return model, temperature, system_prompt
+    return model, system_prompt
 
 def _setup_ollama_connection_test():
     """Setup connection test button based on backend."""
@@ -414,7 +544,7 @@ def _setup_ollama_connection_test():
                     model="",
                     messages=[{"role": "user", "content": "Hello"}],
                     system="",
-                    temperature=0.0
+                    temperature=TEMPERATURE
                 )
                 st.success("Connected to Mistral API successfully!")
             except Exception as e:
@@ -426,7 +556,7 @@ def _display_chat_history():
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-def _handle_chat_input(model, temperature, system_prompt):
+def _handle_chat_input(model, system_prompt):
     """Handle chat input and response generation."""
     if prompt := st.chat_input("Ask about parliamentary debates..."):
         # Add user message to chat history
@@ -438,9 +568,9 @@ def _handle_chat_input(model, temperature, system_prompt):
         
         # Display assistant response in chat message container
         with st.chat_message("assistant"):
-            _generate_and_display_chat_response(model, temperature, system_prompt)
+            _generate_and_display_chat_response(model, system_prompt)
 
-def _generate_and_display_chat_response(model, temperature, system_prompt):
+def _generate_and_display_chat_response(model, system_prompt):
     """Generate and display chat response."""
     message_placeholder = st.empty()
     
@@ -450,7 +580,7 @@ def _generate_and_display_chat_response(model, temperature, system_prompt):
                 model=model,
                 messages=st.session_state.messages,
                 system=system_prompt,
-                temperature=temperature
+                temperature=TEMPERATURE
             )
             
             message_placeholder.markdown(response)
