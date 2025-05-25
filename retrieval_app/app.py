@@ -73,7 +73,7 @@ def main():
     </style>
     """, unsafe_allow_html=True)
     
-    st.markdown("## RAGbattre")
+    st.markdown("## Rabattre")
     
     # Define application modes
     modes = ["Document Retrieval","RAG Mode", "Chat with Ollama"]
@@ -87,19 +87,22 @@ def main():
         retrieval_mode()
 
 def chat_mode():
-    st.markdown("### Chat with Ollama LLM")
-    
     # Initialize chat session state
     _initialize_chat_session_state()
     
-    # Sidebar configuration
+    # Sidebar configuration with organized sections
     with st.sidebar:
-        st.header("Chat Configuration")
+        st.header("⚙️ Configuration")
         
-        model, system_prompt = _setup_chat_options()
-        _setup_ollama_connection_test()
+        # Model Configuration Section
+        with st.expander("📋 Model Settings", expanded=True):
+            model, system_prompt = _setup_chat_options_enhanced()
+        
+        # Connection Testing Section
+        with st.expander("🔧 Connection", expanded=False):
+            _setup_ollama_connection_test()
     
-    # Display chat history and handle input
+    # Main chat area
     _display_chat_history()
     _handle_chat_input(model, system_prompt)
 
@@ -142,29 +145,40 @@ def retrieval_mode():
     _display_session_info_main(collection_name)
 
 def rag_mode():
-    st.markdown("### RAG Mode: Retrieval Augmented Generation")
-    
     # Initialize session state
     _initialize_session_state()
     
-    # Sidebar configuration
+    # Sidebar configuration with organized sections
     with st.sidebar:
-        st.header("RAG Configuration")
+        st.header("⚙️ Configuration")
         
-        collection_name = _setup_collection_selector()
-        model, n_results, system_prompt, use_reranking = _setup_rag_options()
+        # Basic Configuration Section
+        with st.expander("📋 Basic Settings", expanded=True):
+            collection_name = _setup_collection_selector()
+            model = _setup_model_selector()
+            n_results = st.slider("Number of context documents", min_value=1, max_value=20, value=3)
+        
+        # Advanced Options Section
+        with st.expander("🔧 Advanced Options", expanded=False):
+            system_prompt = _setup_system_prompt()
+            use_reranking = st.checkbox("🎯 Enable document reranking")
         
         # Auto-initialize ChromaDB
         _auto_initialize_chromadb(collection_name)
         
+        # Example Questions Section
         _display_example_questions(collection_name)
 
-    # Display session info in main area
-    _display_session_info_main(collection_name)
+    # Main area with better organization
+    # 1. Query Input (prominent position)
+    query = _handle_query_input(prompt_text="", default_text="Posez votre question sur les documents")
     
-    # Query input and RAG generation
-    query = _handle_rag_query_input()
-    _handle_rag_generation(query, collection_name, model, n_results, system_prompt, use_reranking)
+    # 2. RAG Generation
+    _handle_rag_generation_enhanced(query, collection_name, model, n_results, system_prompt, use_reranking)
+    
+    # 3. Session Info (moved to bottom)
+    st.markdown("---")
+    _display_session_info_main(collection_name)
 
 
 # Helper functions for cleaner code organization
@@ -235,11 +249,7 @@ def _display_session_info_main(collection_name):
             text = query_seance(collection_name, CORPUS_DIR)
             
             # Info header
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                st.info(f"📅 Session: {collection_name}")
-            with col2:
-                st.metric("Length", f"{len(text):,} chars")
+            st.info(f"📅 Session: {collection_name}")
             
             # Scrollable content
             container = st.container(height=400)
@@ -400,55 +410,91 @@ def _display_search_results(identifiants, docs, strategy, show_sidebar_preview=F
                     st.markdown(f"**Doc {i+1}:** {doc[:100]}...")
                     st.markdown("---")
 
-def _setup_rag_options():
-    """Setup RAG-specific configuration options."""
-    model = DEFAULT_GENERATION_MODEL
-    n_results = st.slider("Number of context documents", min_value=1, max_value=20, value=3)
-    
-    system_prompt = st.text_area(
-        "RAG System Prompt",
+def _setup_model_selector():
+    """Setup model selection for RAG mode."""
+    return DEFAULT_GENERATION_MODEL
+
+def _setup_system_prompt():
+    """Setup system prompt configuration."""
+    return st.text_area(
+        "System Prompt",
         value=""""Tu es un assistant utile qui répond aux questions en te basant sur le contexte fourni.
         Si la réponse ne se trouve pas dans le contexte, réponds : Je n'ai pas assez d'informations pour répondre à cette question.""",
-        height=150
+        height=120
     )
-    
-    use_reranking = st.checkbox("Enable document reranking")
-    
-    return model, n_results, system_prompt, use_reranking
 
-def _handle_rag_query_input():
-    """Handle RAG query input."""
-    return _handle_query_input("Enter your query about the documents")
-
-def _handle_rag_generation(query, collection_name, model, n_results, system_prompt, use_reranking):
-    """Handle RAG generation process."""
-    if st.button("Generate RAG Response"):
+def _handle_rag_generation_enhanced(query, collection_name, model, n_results, system_prompt, use_reranking):
+    """Enhanced RAG generation with better UI."""
+    
+    # Generate button with better styling
+    generate_col, status_col = st.columns([2, 3])
+    
+    with generate_col:
+        generate_clicked = st.button("🤖 Generate Response", type="primary", use_container_width=True)
+    
+    if generate_clicked and query.strip():
         if not _initialize_chromadb_if_needed(collection_name):
             return
         
         try:
-            with st.spinner("Performing Retrieval Augmented Generation..."):
+            with st.spinner("🤖 Performing Retrieval Augmented Generation..."):
                 # Retrieve documents
                 if use_reranking:
-                    identifiants, docs = query_documents_reranking(query, st.session_state.collection, n_results)
+                    # Get both standard and reranked results for comparison
+                    identifiants_standard, docs_standard = query_documents(query, st.session_state.collection, n_results)
+                    identifiants_reranked, docs_reranked = query_documents_reranking(query, st.session_state.collection, n_results)
+                    
+                    # Display in tabs for comparison
+                    tab1, tab2 = st.tabs(["📄 Standard Results", "🎯 Reranked Results"])
+                    
+                    with tab1:
+                        display_documents(identifiants_standard, docs_standard, "Standard Retrieval - Context Documents")
+                        
+                        # Generate RAG response with standard results
+                        context_standard = "\n\n".join([f"Document {i+1}:\n{doc}" for i, doc in enumerate(docs_standard)])
+                        response_standard = _generate_rag_response(query, context_standard, model, system_prompt)
+                        
+                        st.markdown("### 🤖 Generated Response (Standard)")
+                        st.markdown(response_standard)
+                    
+                    with tab2:
+                        display_documents(identifiants_reranked, docs_reranked, "Reranked Retrieval - Context Documents")
+                        
+                        # Generate RAG response with reranked results
+                        context_reranked = "\n\n".join([f"Document {i+1}:\n{doc}" for i, doc in enumerate(docs_reranked)])
+                        response_reranked = _generate_rag_response(query, context_reranked, model, system_prompt)
+                        
+                        st.markdown("### 🤖 Generated Response (Reranked)")
+                        st.markdown(response_reranked)
+                    
+                    # Use reranked results for source information
+                    identifiants, docs = identifiants_reranked, docs_reranked
+                    
                 else:
                     identifiants, docs = query_documents(query, st.session_state.collection, n_results)
-                
-                # Display retrieved documents
-                _display_retrieved_documents(identifiants, docs)
-                
-                # Generate and display RAG response
-                context = "\n\n".join([f"Document {i+1}:\n{doc}" for i, doc in enumerate(docs)])
-                response = _generate_rag_response(query, context, model, system_prompt)
-                
-                st.subheader("RAG Response")
-                st.markdown(response)
+                    
+                    # Display retrieved documents
+                    display_documents(identifiants, docs, "📄 Standard Retrieval - Context Documents")
+                    
+                    # Generate and display RAG response
+                    context = "\n\n".join([f"Document {i+1}:\n{doc}" for i, doc in enumerate(docs)])
+                    response = _generate_rag_response(query, context, model, system_prompt)
+                    
+                    st.markdown("### 🤖 Generated Response")
+                    st.markdown(response)
                 
                 # Generate and display source information
                 _generate_and_display_source(identifiants, docs, query, model)
+                
+                # Show generation summary
+                #with status_col:
+                #    st.success(f"✓ Generated from {len(docs)} documents")
         
         except Exception as e:
-            st.error(f"Error in RAG generation: {str(e)}")
+            st.error(f"❌ Error in RAG generation: {str(e)}")
+    
+    elif generate_clicked and not query.strip():
+        st.warning("⚠️ Please enter a question")
 
 def _display_retrieved_documents(identifiants, docs):
     """Display the retrieved documents."""
@@ -484,11 +530,11 @@ def _generate_and_display_source(identifiants, docs, query, model):
     parsed_source = extract_document_data(source)
     st.markdown(parsed_source)
     
-    id_doc, doc = query_documents(parsed_source["texte_source"], st.session_state.collection, 1)
-    st.markdown("### doc id")
-    st.markdown(id_doc[0])
-    st.markdown("### texte")
-    st.markdown(doc[0][:100])
+    #id_doc, doc = query_documents(parsed_source["texte_source"], st.session_state.collection, 1)
+    #st.markdown("### doc id")
+    #st.markdown(id_doc[0])
+    #st.markdown("### texte")
+    #st.markdown(doc[0][:100])
 
 
 # Chat mode helper functions
@@ -497,30 +543,31 @@ def _initialize_chat_session_state():
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-def _setup_chat_options():
-    """Setup chat configuration options."""
+def _setup_chat_options_enhanced():
+    """Setup enhanced chat configuration options."""
     # Get available models only if using Ollama backend
     if MODEL_BACKEND == "ollama":
         try:
             models = get_available_models()
             default_index = 0
+            st.success("✓ Ollama connected")
         except Exception as e:
-            st.error(f"Error connecting to Ollama: {str(e)}")
+            st.error(f"❌ Error connecting to Ollama: {str(e)}")
             models = ["llama3", "mistral", "phi3", "gemma", "mixtral", "llama2"]
             default_index = 0
         
         model = st.selectbox(
-            "Choose your Ollama model",
+            "🤖 Choose your Ollama model",
             models,
             index=default_index
         )
     else:
         # For Mistral backend, model is predefined
         model = "mistral-large-latest"
-        st.info(f"Using Mistral backend with model: {model}")
+        st.info(f"🔗 Using Mistral backend with model: {model}")
     
     system_prompt = st.text_area(
-        "System Prompt",
+        "📝 System Prompt",
         value="You are a helpful assistant that analyzes parliamentary debates. Provide clear, concise analysis.",
         height=100
     )
