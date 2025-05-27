@@ -76,7 +76,7 @@ def main():
     st.markdown("## Rabattre")
     
     # Define application modes
-    modes = ["Document Retrieval","RAG Mode", "Chat with Ollama"]
+    modes = [ "Chat with Ollama","Document Retrieval","RAG Mode"]
     selected_mode = st.sidebar.radio("Select Mode", modes)
     
     if selected_mode == "Chat with Ollama":
@@ -249,7 +249,7 @@ def _display_session_info_main(collection_name):
             text = query_seance(collection_name, CORPUS_DIR)
             
             # Info header
-            st.info(f"📅 Session: {collection_name}")
+            #st.info(f"📅 Session: {collection_name}")
             
             # Scrollable content
             container = st.container(height=400)
@@ -561,10 +561,10 @@ def _setup_chat_options_enhanced():
             models,
             index=default_index
         )
-    else:
+    else :
         # For Mistral backend, model is predefined
-        model = "mistral-large-latest"
-        st.info(f"🔗 Using Mistral backend with model: {model}")
+        model = "no specific model"
+        st.info(f"🔗 Using {MODEL_BACKEND} backend to generate response")
     
     system_prompt = st.text_area(
         "📝 System Prompt",

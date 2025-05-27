@@ -1,7 +1,8 @@
 import ollama
 from mistralai import Mistral
+import cohere
 
-from .core import MISTRAL_MODEL, mistral_api_key, MODEL_BACKEND
+from .core import MISTRAL_MODEL, mistral_api_key, MODEL_BACKEND, COHERE_MODEL, cohere_api_key
 
 CTX_SIZE = 10000
 
@@ -61,6 +62,20 @@ def get_ollama_response_mistral(model="no model",messages ="",system="",temperat
     )
     return response.choices[0].message.content
 
+def get_ollama_response_cohere(model="no model",messages ="",system="",temperature=0.7):
+    client = cohere.ClientV2(cohere_api_key) 
+    formatted_messages = []
+    if system:
+        formatted_messages.append({"role": "system", "content": system})
+    for msg in messages:
+        if msg["role"] in ["user", "assistant"]:
+            formatted_messages.append(msg)
+    response = client.chat(
+        model= COHERE_MODEL,
+        messages = formatted_messages
+    )
+    return response.message.content[0].text 
+
 
 def get_llm_response(model="", messages="", system="", temperature=0.7):
     """
@@ -77,6 +92,8 @@ def get_llm_response(model="", messages="", system="", temperature=0.7):
     """
     if MODEL_BACKEND == "mistral":
         return get_ollama_response_mistral(model=model, messages=messages, system=system, temperature=temperature)
+    elif MODEL_BACKEND == "cohere":
+        return get_ollama_response_cohere(model=model,messages=messages,system=system,temperature=temperature)
     elif MODEL_BACKEND == "ollama":
         return get_ollama_response(model=model, messages=messages, temperature=temperature)
     else:

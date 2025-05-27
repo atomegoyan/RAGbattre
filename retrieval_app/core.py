@@ -25,11 +25,13 @@ DEFAULT_EMBEDDING_MODEL = "Alibaba-NLP/gte-multilingual-base"
 DEFAULT_GENERATION_MODEL = "llama3.2:1b"
 MISTRAL_MODEL = "mistral-large-latest"
 mistral_api_key = "spJ5ykWOWSiVCjbdf1PvfSX5XPVLse0x"
+COHERE_MODEL = "command-a-03-2025"
+cohere_api_key = "ckYq5LUA0oVWB1Pd9Clv4RW3xhJzb3PgQqHUvzRS"
 EXAMPLE_QUESTIONS_FILE = os.path.join(DATA_DIR, "questions_strat1.jsonl")
 TEMPERATURE = 0.0
 
 # Model backend configuration - "ollama" or "mistral"
-MODEL_BACKEND = "mistral"
+MODEL_BACKEND = "cohere"
 
 # Default query
 DEFAULT_QUERY = "Qui est le président de la séance ?"
