@@ -359,7 +359,8 @@ def _handle_document_search_enhanced(query, collection_name, n_results, use_rege
                     identifiants, docs = query_documents_regex_filtering(
                         query, st.session_state.collection, regex_pattern, n_results
                     )
-                    _display_search_results(identifiants, docs, strategy, use_reranking)
+                    #_display_search_results(identifiants, docs, strategy, use_reranking)
+                    display_documents(identifiants,docs,strategy)
                     
                 elif use_reranking:
                     # Show both naive and reranked results in tabs
@@ -385,11 +386,8 @@ def _handle_document_search_enhanced(query, collection_name, n_results, use_rege
                 else:
                     strategy = "📄 Standard Search"
                     identifiants, docs = query_documents(query, st.session_state.collection, n_results)
-                    _display_search_results(identifiants, docs, strategy, False)
-                    
-                # Show search summary
-                #with status_col:
-                #    st.success(f"✓ Found {len(docs) if 'docs' in locals() else 0} documents")
+                    display_documents(identifiants,docs,"📄 Standard Retrieval - Context Documents")
+                
                     
         except Exception as e:
             st.error(f"❌ Error querying documents: {str(e)}")
@@ -397,9 +395,6 @@ def _handle_document_search_enhanced(query, collection_name, n_results, use_rege
     elif search_clicked and not query.strip():
         st.warning("⚠️ Please enter a search query")
 
-def _display_search_results(identifiants, docs, strategy, show_sidebar_preview=False):
-    """Display search results with optional sidebar preview."""
-    display_documents(identifiants, docs, strategy)
     
     # Optional sidebar preview for standard search
     if show_sidebar_preview and len(docs) > 0:
@@ -486,9 +481,6 @@ def _handle_rag_generation_enhanced(query, collection_name, model, n_results, sy
                 # Generate and display source information
                 _generate_and_display_source(identifiants, docs, query, model)
                 
-                # Show generation summary
-                #with status_col:
-                #    st.success(f"✓ Generated from {len(docs)} documents")
         
         except Exception as e:
             st.error(f"❌ Error in RAG generation: {str(e)}")
@@ -496,9 +488,6 @@ def _handle_rag_generation_enhanced(query, collection_name, model, n_results, sy
     elif generate_clicked and not query.strip():
         st.warning("⚠️ Please enter a question")
 
-def _display_retrieved_documents(identifiants, docs):
-    """Display the retrieved documents."""
-    display_documents(identifiants, docs, "Retrieved Documents")
 
 def _generate_rag_response(query, context, model, system_prompt):
     """Generate RAG response using the LLM."""
@@ -529,12 +518,7 @@ def _generate_and_display_source(identifiants, docs, query, model):
     
     parsed_source = extract_document_data(source)
     st.markdown(parsed_source)
-    
-    #id_doc, doc = query_documents(parsed_source["texte_source"], st.session_state.collection, 1)
-    #st.markdown("### doc id")
-    #st.markdown(id_doc[0])
-    #st.markdown("### texte")
-    #st.markdown(doc[0][:100])
+
 
 
 # Chat mode helper functions
@@ -637,8 +621,6 @@ def _generate_and_display_chat_response(model, system_prompt):
     
     except Exception as e:
         message_placeholder.error(f"Error: {str(e)}\n\nMake sure Ollama is running with the selected model.")
-
-
 
 def display_documents(identifiants, docs, header_message="Results", location="main", truncate=False):
     """Unified document display function for all modes."""

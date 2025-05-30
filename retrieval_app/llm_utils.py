@@ -6,7 +6,22 @@ from .core import MISTRAL_MODEL, mistral_api_key, MODEL_BACKEND, COHERE_MODEL, c
 
 CTX_SIZE = 10000
 
-
+def format_messages(messages, system=None):
+    """
+    Formats messages for the LLM API.
+    Args:
+        messages: List of message dictionaries.
+        system: Optional system prompt string.
+    Returns:
+        List of formatted messages.
+    """
+    formatted_messages = []
+    if system:
+        formatted_messages.append({"role": "system", "content": system})
+    for msg in messages:
+        if msg["role"] in ["user", "assistant"]:
+            formatted_messages.append(msg)
+    return formatted_messages
 
 def get_available_models():
     try:
@@ -48,7 +63,7 @@ def get_ollama_response(model, messages,context_size = 10000, temperature=0.7):
     except Exception as e:
         raise Exception(f"Error generating response: {str(e)}")
     
-def get_ollama_response_mistral(model="no model",messages ="",system="",temperature=0.7):
+def get_ollama_response_mistral_backup(model="no model",messages ="",system="",temperature=0.7):
     client = Mistral(api_key=mistral_api_key)
     formatted_messages = []
     if system:
@@ -62,7 +77,19 @@ def get_ollama_response_mistral(model="no model",messages ="",system="",temperat
     )
     return response.choices[0].message.content
 
-def get_ollama_response_cohere(model="no model",messages ="",system="",temperature=0.7):
+def get_ollama_response_mistral(messages, system="", temperature=0.7):
+    try:
+        client = Mistral(api_key=mistral_api_key)
+        formatted_messages = format_messages(messages, system)
+        response = client.chat.complete(
+            model=MISTRAL_MODEL,
+            messages=formatted_messages
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        raise Exception(f"Error in Mistral response: {str(e)}")
+
+def get_ollama_response_cohere_backup(model="no model",messages ="",system="",temperature=0.7):
     client = cohere.ClientV2(cohere_api_key) 
     formatted_messages = []
     if system:
@@ -76,8 +103,20 @@ def get_ollama_response_cohere(model="no model",messages ="",system="",temperatu
     )
     return response.message.content[0].text 
 
+def get_ollama_response_cohere(messages, system="", temperature=0.7):
+    try:
+        client = cohere.ClientV2(cohere_api_key)
+        formatted_messages = format_messages(messages, system)
+        response = client.chat(
+            model=COHERE_MODEL,
+            messages=formatted_messages
+        )
+        return response.message.content[0].text
+    except Exception as e:
+        raise Exception(f"Error in Cohere response: {str(e)}")
 
-def get_llm_response(model="", messages="", system="", temperature=0.7):
+
+def get_llm_response_backup(model="", messages="", system="", temperature=0.7):
     """
     Unified function that calls either Ollama or Mistral based on MODEL_BACKEND configuration.
     
@@ -99,3 +138,15 @@ def get_llm_response(model="", messages="", system="", temperature=0.7):
     else:
         raise ValueError(f"Unknown MODEL_BACKEND: {MODEL_BACKEND}. Must be 'ollama' or 'mistral'")
 
+def get_llm_response(model = "", messages="", system="", temperature=0.7):
+    """
+    Unified function that calls the appropriate backend based on MODEL_BACKEND.
+    """
+    if MODEL_BACKEND == "mistral":
+        return get_ollama_response_mistral(messages, system, temperature)
+    elif MODEL_BACKEND == "cohere":
+        return get_ollama_response_cohere(messages, system, temperature)
+    elif MODEL_BACKEND == "ollama":
+        return get_ollama_response(model=model, messages=messages, temperature=temperature)
+    else:
+        raise Exception(f"Unsupported MODEL_BACKEND: {MODEL_BACKEND}")
