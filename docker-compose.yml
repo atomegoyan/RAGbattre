@@ -6,8 +6,8 @@ services:
     volumes:
       # Mount data directory from host
       - ./data:/app/data
-      # Mount HuggingFace cache from host system  
-      - /home/wac/.cache/huggingface:/home/appuser/.cache/huggingface
+      # Mount HuggingFace cache from host system
+      - /home/atom/.cache/huggingface:/home/appuser/.cache/huggingface
     environment:
       # Tell HuggingFace to use the mounted cache
       - HF_HOME=/home/appuser/.cache/huggingface
@@ -17,4 +17,4 @@ services:
       - STREAMLIT_SERVER_ADDRESS=0.0.0.0
       - PYTHONPATH=/app
     restart: unless-stopped
-    user: "1000:1000"
+    user: "${UID:-1000}:${GID:-1000}"
