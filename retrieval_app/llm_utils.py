@@ -88,6 +88,18 @@ def get_ollama_response_mistral(messages, system="", temperature=0.7):
         return response.choices[0].message.content
     except Exception as e:
         raise Exception(f"Error in Mistral response: {str(e)}")
+    
+def get_ollama_response_mistral_structured_output(messages, response_format, temperature=0.7):
+    try:
+        client = Mistral(api_key=mistral_api_key)
+        response = client.chat.parse(
+            model=MISTRAL_MODEL,
+            messages=messages,
+            response_format=response_format
+        )
+        return response.choices[0]
+    except Exception as e:
+        raise Exception(f"Error in Mistral structured output response: {str(e)}")
 
 def get_ollama_response_cohere_backup(model="no model",messages ="",system="",temperature=0.7):
     client = cohere.ClientV2(cohere_api_key) 

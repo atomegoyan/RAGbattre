@@ -31,7 +31,7 @@ EXAMPLE_QUESTIONS_FILE = os.path.join(DATA_DIR, "questions_strat1.jsonl")
 TEMPERATURE = 0.0
 
 # Model backend configuration - "ollama" or "mistral"
-MODEL_BACKEND = "cohere"
+MODEL_BACKEND = "mistral"
 
 # Default query
 DEFAULT_QUERY = "Qui est le président de la séance ?"

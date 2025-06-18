@@ -8,3 +8,10 @@ venv/
 data/
 
 .vscode/
+
+
+/.cache
+/.cache/
+
+/.claude
+/.claude/

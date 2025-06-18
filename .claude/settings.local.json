@@ -1,8 +1,16 @@
 {
   "permissions": {
     "allow": [
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(streamlit run:*)",
+      "Bash(env)",
+      "Bash(chmod:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
-  }
+  },
+  "enableAllProjectMcpServers": false
 }

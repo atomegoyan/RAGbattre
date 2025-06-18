@@ -1,0 +1,50 @@
+import numpy as np
+import os
+from pathlib import Path
+
+# Update path to match script name
+path_to_data = os.path.join(os.getcwd(), "data")
+path_to_corpus = os.path.join(os.getcwd(), "data", "corpus")
+path_to_corpus_splitted = os.path.join(path_to_data, "corpus_splitted_multihop")
+# Ensure the output directory existsœ
+
+from generate_chunks import chunking_strategy_multihop
+
+
+def split_debates(f, chunk_strat):
+    """Split a debate file into chunks using the specified strategy."""
+    print(f"Split and saving file: {f}")
+    
+    base_f = f.split(".")[0]
+    output_dir = os.path.join(path_to_corpus_splitted, base_f)
+    os.makedirs(output_dir, exist_ok=True)
+
+    try:
+        with open(os.path.join(path_to_corpus, f), 'r', encoding='utf-8') as file:
+            text = file.read()
+            
+        blocs = chunk_strat(text)
+
+        for i, b in enumerate(blocs):
+            output_path = os.path.join(output_dir, f"{base_f}_{i:03}.txt")
+            with open(output_path, "w", encoding='utf-8') as file:
+                file.write(b)
+                
+        print(f"Successfully created {len(blocs)} chunks for {f}")
+        
+    except Exception as e:
+        print(f"Error processing file {f}: {e}")
+
+
+def main():
+    """Main function to process all corpus files."""
+    corpus_files = os.listdir(path_to_corpus)
+    
+    
+    print(f"Processing {len(corpus_files)} files...")
+    for cf in sorted(corpus_files):
+        split_debates(cf, chunking_strategy_multihop)
+
+
+if __name__ == "__main__":
+    main()

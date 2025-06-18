@@ -1,0 +1,143 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# PyCharm
+.idea/
+
+# Environment variables
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Logs
+logs/
+*.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.cover
+.nyc_output
+
+# Dependency directories
+node_modules/
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# Docker
+*.dockerfile.swp
+
+# Temporary files
+tmp/
+temp/
+
+# =============================================================================
+# HEAVY FILES TO EXCLUDE FROM DOCKER IMAGE (mounted as volumes instead)
+# =============================================================================
+
+# Data directory - mounted as volume
+data/
+
+# Models directory - mounted as volume  
+models/
+
+# Model caches
+.cache/
+*.cache/
+
+# Large model files
+*.bin
+*.safetensors
+*.pt
+*.pth
+*.onnx
+*.h5
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Large datasets
+*.parquet
+*.feather
+*.pkl
+*.pickle
+
+# Compressed archives
+*.zip
+*.tar.gz
+*.tar.bz2
+*.rar
+*.7z
+
+# Ollama models (handled by ollama service)
+.ollama/
+
+# HuggingFace cache (mounted as volume)
+.cache/huggingface/

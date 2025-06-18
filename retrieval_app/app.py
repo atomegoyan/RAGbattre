@@ -396,14 +396,14 @@ def _handle_document_search_enhanced(query, collection_name, n_results, use_rege
         st.warning("⚠️ Please enter a search query")
 
     
-    # Optional sidebar preview for standard search
-    if show_sidebar_preview and len(docs) > 0:
-        with st.sidebar:
-            st.markdown("### 👁️ Quick Preview")
-            with st.container(height=300):
-                for i, doc in enumerate(docs[:3]):  # Show top 3 in sidebar
-                    st.markdown(f"**Doc {i+1}:** {doc[:100]}...")
-                    st.markdown("---")
+    # # Optional sidebar preview for standard search
+    # if show_sidebar_preview and len(docs) > 0:
+    #     with st.sidebar:
+    #         st.markdown("### 👁️ Quick Preview")
+    #         with st.container(height=300):
+    #             for i, doc in enumerate(docs[:3]):  # Show top 3 in sidebar
+    #                 st.markdown(f"**Doc {i+1}:** {doc[:100]}...")
+    #                 st.markdown("---")
 
 def _setup_model_selector():
     """Setup model selection for RAG mode."""

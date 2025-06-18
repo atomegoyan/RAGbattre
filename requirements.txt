@@ -1,0 +1,28 @@
+# Core web framework
+streamlit>=1.28.0
+
+# LLM and AI libraries
+ollama>=0.3.0
+mistralai>=1.0.0
+cohere>=5.0.0
+
+# ML and deep learning
+torch>=2.0.0,<2.5.0
+transformers>=4.35.0
+
+# Vector database and embeddings
+chromadb>=0.4.15
+sentence-transformers>=2.2.0
+
+# Data processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Text processing
+regex>=2023.0.0
+
+# LangChain for text splitting (used in scripts)
+langchain-text-splitters>=0.2.0
+
+# Note: Built-in modules (no installation needed):
+# - ast, json, os, sys, time (Python standard library)
