@@ -19,3 +19,4 @@ services:
       - PYTHONPATH=/app
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
+    
